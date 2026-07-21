@@ -355,6 +355,7 @@ instructions: |-
   4. If gdr_offer_service returns a successful response:
      - Extract the "template" field from the response.
      - Invoke gdr_rate_table_service using the value required by that tool.
+        "title_val"= <title returned by gdr_offer_service>
      - Do not ask the customer for the title or template.
      - Do not derive, rewrite, or modify the value passed between tools.
   5. After both tools complete successfully, combine their information into
@@ -363,29 +364,20 @@ instructions: |-
   FINAL RESPONSE FORMAT
 
   ## Offer Name
-
   Use result.titleID from gdr_offer_service.
   Remove the prefix "cms.cssapp.offerTitle_" and display only the remaining
-  offer name.
+  offer name with correct spaces.
 
   ## Description
-
-  Use result.text.
+  Use result.text from gdr_offer_service.
 
   ## Benefits
-
   List each available item from result.details as bullet points.
 
-  ## Discounts
-
-  Present each key/value pair from result.data in a table.
-
   ## Rate Table
-
   Display the parsed rate table returned by gdr_rate_table_service.
 
   ## Additional Information
-
   Include only when available:
 
   - Additional Rate Details: result.additions
