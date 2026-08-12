@@ -1,0 +1,75 @@
+import numpy as np
+
+from catboost import CatBoostClassifier
+
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    classification_report,
+    confusion_matrix
+)
+
+
+# Identify categorical columns
+categorical_cols = (
+    X_train
+    .select_dtypes(
+        include=['object', 'string', 'category']
+    )
+    .columns
+    .tolist()
+)
+
+
+# Create model
+model = CatBoostClassifier(
+    iterations=500,
+    depth=6,
+    learning_rate=0.05,
+    loss_function='MultiClass',
+    eval_metric='TotalF1',
+    random_seed=42,
+    verbose=100
+)
+
+
+# Train
+model.fit(
+    X_train,
+    y_train,
+    cat_features=categorical_cols,
+    eval_set=(X_test, y_test),
+    early_stopping_rounds=50
+)
+
+
+# Predict
+y_pred = model.predict(X_test)
+y_pred = np.asarray(y_pred).reshape(-1)
+
+
+# Evaluate
+print("Accuracy:",
+      accuracy_score(y_test, y_pred))
+
+print("Macro F1:",
+      f1_score(y_test, y_pred, average='macro'))
+
+print("Weighted F1:",
+      f1_score(y_test, y_pred, average='weighted'))
+
+print("\nClassification Report:\n")
+print(
+    classification_report(
+        y_test,
+        y_pred
+    )
+)
+
+print("\nConfusion Matrix:\n")
+print(
+    confusion_matrix(
+        y_test,
+        y_pred
+    )
+)
