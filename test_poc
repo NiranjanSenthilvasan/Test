@@ -1,163 +1,42 @@
-import pandas as pd
+import numpy as np
+from sklearn.model_selection import StratifiedKFold
+from sklearn.utils.class_weight import compute_sample_weight
+from sklearn.metrics import f1_score
+from sklearn.base import clone
 
-from xgboost import XGBClassifier
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import (
-    accuracy_score,
-    f1_score,
-    classification_report,
-    confusion_matrix
-)
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
+scores = []
 
-# ============================================================
-# 1. COPY DATA
-# ============================================================
+for fold, (train_idx, val_idx) in enumerate(cv.split(X_train_xgb, y_train_xgb), 1):
 
-X_train_xgb = X_train.copy()
-X_test_xgb = X_test.copy()
+    X_tr = X_train_xgb.iloc[train_idx]
+    X_val = X_train_xgb.iloc[val_idx]
 
+    y_tr = y_train_xgb.iloc[train_idx]
+    y_val = y_train_xgb.iloc[val_idx]
 
-# ============================================================
-# 2. IDENTIFY CATEGORICAL COLUMNS
-# ============================================================
-
-cat_cols = X_train_xgb.select_dtypes(
-    include=['object', 'string', 'category']
-).columns.tolist()
-
-print("Categorical columns:")
-print(cat_cols)
-
-
-# ============================================================
-# 3. CONVERT CATEGORICAL COLUMNS
-#    Categories are learned from TRAIN only
-# ============================================================
-
-for col in cat_cols:
-
-    train_categories = (
-        X_train_xgb[col]
-        .astype('category')
-        .cat.categories
+    # Calculate weights ONLY from this training fold
+    sample_weights = compute_sample_weight(
+        class_weight="balanced",
+        y=y_tr
     )
 
-    X_train_xgb[col] = pd.Categorical(
-        X_train_xgb[col],
-        categories=train_categories
+    # Same XGBoost configuration as your current model
+    model = clone(xgb_model)
+
+    model.fit(
+        X_tr,
+        y_tr,
+        sample_weight=sample_weights
     )
 
-    X_test_xgb[col] = pd.Categorical(
-        X_test_xgb[col],
-        categories=train_categories
-    )
+    pred = model.predict(X_val)
 
+    score = f1_score(y_val, pred, average="macro")
+    scores.append(score)
 
-# ============================================================
-# 4. ENCODE TARGET
-# ============================================================
+    print(f"Fold {fold}: {score:.4f}")
 
-label_encoder = LabelEncoder()
-
-y_train_xgb = label_encoder.fit_transform(y_train)
-y_test_xgb = label_encoder.transform(y_test)
-
-print("Target classes:")
-print(label_encoder.classes_)
-
-
-# ============================================================
-# 5. CREATE XGBOOST MODEL
-# ============================================================
-
-xgb_model = XGBClassifier(
-    objective='multi:softprob',
-    num_class=len(label_encoder.classes_),
-
-    n_estimators=500,
-    learning_rate=0.05,
-    max_depth=6,
-
-    subsample=0.8,
-    colsample_bytree=0.8,
-
-    enable_categorical=True,
-    tree_method='hist',
-
-    random_state=42,
-    eval_metric='mlogloss'
-)
-
-
-# ============================================================
-# 6. TRAIN
-# ============================================================
-
-xgb_model.fit(
-    X_train_xgb,
-    y_train_xgb,
-    eval_set=[
-        (X_test_xgb, y_test_xgb)
-    ],
-    verbose=False
-)
-
-
-# ============================================================
-# 7. PREDICT
-# ============================================================
-
-y_pred_xgb = xgb_model.predict(
-    X_test_xgb
-)
-
-
-# ============================================================
-# 8. EVALUATE
-# ============================================================
-
-print(
-    "Accuracy:",
-    accuracy_score(
-        y_test_xgb,
-        y_pred_xgb
-    )
-)
-
-print(
-    "Macro F1:",
-    f1_score(
-        y_test_xgb,
-        y_pred_xgb,
-        average='macro'
-    )
-)
-
-print(
-    "Weighted F1:",
-    f1_score(
-        y_test_xgb,
-        y_pred_xgb,
-        average='weighted'
-    )
-)
-
-print("\nClassification Report:\n")
-
-print(
-    classification_report(
-        y_test_xgb,
-        y_pred_xgb,
-        target_names=label_encoder.classes_
-    )
-)
-
-print("\nConfusion Matrix:\n")
-
-print(
-    confusion_matrix(
-        y_test_xgb,
-        y_pred_xgb
-    )
-)
+print("\nMean Macro F1:", np.mean(scores))
+print("Std:", np.std(scores))
