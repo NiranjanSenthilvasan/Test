@@ -1,0 +1,324 @@
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    classification_report,
+    confusion_matrix
+)
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
+from tensorflow.keras.callbacks import EarlyStopping
+
+
+# ============================================================
+# 1. COPY DATA
+# ============================================================
+
+X_train_nn = X_train.copy()
+X_test_nn = X_test.copy()
+
+
+# ============================================================
+# 2. DROP COLUMNS WE ALREADY DECIDED NOT TO USE
+# ============================================================
+
+drop_cols = [
+    "shipment_id",
+    "courier_partner_id",
+    "carrier_lane"
+]
+
+X_train_nn = X_train_nn.drop(
+    columns=drop_cols,
+    errors="ignore"
+)
+
+X_test_nn = X_test_nn.drop(
+    columns=drop_cols,
+    errors="ignore"
+)
+
+
+# ============================================================
+# 3. IDENTIFY CATEGORICAL / NUMERICAL COLUMNS
+# ============================================================
+
+categorical_cols = X_train_nn.select_dtypes(
+    include=["object", "string", "category"]
+).columns.tolist()
+
+numerical_cols = X_train_nn.select_dtypes(
+    include=np.number
+).columns.tolist()
+
+print("Categorical:", len(categorical_cols))
+print("Numerical:", len(numerical_cols))
+
+
+# ============================================================
+# 4. CLEAN CATEGORICAL VALUES
+# ============================================================
+
+for col in categorical_cols:
+
+    X_train_nn[col] = (
+        X_train_nn[col]
+        .astype(str)
+        .str.strip()
+    )
+
+    X_test_nn[col] = (
+        X_test_nn[col]
+        .astype(str)
+        .str.strip()
+    )
+
+
+# ============================================================
+# 5. PREPROCESSOR
+#
+# Numerical -> StandardScaler
+# Categorical -> OneHotEncoder
+#
+# Encoder is FIT ONLY on training data
+# ============================================================
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        (
+            "num",
+            StandardScaler(),
+            numerical_cols
+        ),
+        (
+            "cat",
+            OneHotEncoder(
+                handle_unknown="ignore",
+                sparse_output=False
+            ),
+            categorical_cols
+        )
+    ],
+    remainder="drop"
+)
+
+
+# ============================================================
+# 6. FIT ON TRAIN, TRANSFORM TRAIN + TEST
+# ============================================================
+
+X_train_nn_processed = preprocessor.fit_transform(
+    X_train_nn
+)
+
+X_test_nn_processed = preprocessor.transform(
+    X_test_nn
+)
+
+print("NN train shape:", X_train_nn_processed.shape)
+print("NN test shape :", X_test_nn_processed.shape)
+
+
+# ============================================================
+# 7. TARGET
+#
+# y_train_xgb / y_test_xgb are already encoded:
+# 0,1,2,3
+# ============================================================
+
+y_train_nn = np.asarray(y_train_xgb)
+y_test_nn = np.asarray(y_test_xgb)
+
+n_classes = len(np.unique(y_train_nn))
+
+
+# ============================================================
+# 8. CLASS WEIGHTS
+# ============================================================
+
+classes = np.unique(y_train_nn)
+
+weights = compute_class_weight(
+    class_weight="balanced",
+    classes=classes,
+    y=y_train_nn
+)
+
+class_weights = dict(
+    zip(classes, weights)
+)
+
+print("Class weights:")
+print(class_weights)
+
+
+# ============================================================
+# 9. BUILD NEURAL NETWORK
+# ============================================================
+
+tf.random.set_seed(42)
+np.random.seed(42)
+
+n_features = X_train_nn_processed.shape[1]
+
+nn_model = Sequential([
+
+    tf.keras.Input(shape=(n_features,)),
+
+    Dense(
+        256,
+        activation="relu"
+    ),
+
+    BatchNormalization(),
+
+    Dropout(0.35),
+
+    Dense(
+        128,
+        activation="relu"
+    ),
+
+    BatchNormalization(),
+
+    Dropout(0.30),
+
+    Dense(
+        64,
+        activation="relu"
+    ),
+
+    Dropout(0.20),
+
+    Dense(
+        n_classes,
+        activation="softmax"
+    )
+])
+
+
+# ============================================================
+# 10. COMPILE
+# ============================================================
+
+nn_model.compile(
+    optimizer=tf.keras.optimizers.Adam(
+        learning_rate=0.001
+    ),
+
+    loss="sparse_categorical_crossentropy",
+
+    metrics=["accuracy"]
+)
+
+nn_model.summary()
+
+
+# ============================================================
+# 11. EARLY STOPPING
+# ============================================================
+
+early_stop = EarlyStopping(
+    monitor="val_loss",
+    patience=10,
+    restore_best_weights=True,
+    min_delta=0.001
+)
+
+
+# ============================================================
+# 12. TRAIN
+# ============================================================
+
+history = nn_model.fit(
+
+    X_train_nn_processed,
+    y_train_nn,
+
+    validation_split=0.20,
+
+    epochs=100,
+
+    batch_size=64,
+
+    class_weight=class_weights,
+
+    callbacks=[
+        early_stop
+    ],
+
+    verbose=1
+)
+
+
+# ============================================================
+# 13. PREDICT
+# ============================================================
+
+y_prob_nn = nn_model.predict(
+    X_test_nn_processed
+)
+
+y_pred_nn = np.argmax(
+    y_prob_nn,
+    axis=1
+)
+
+
+# ============================================================
+# 14. EVALUATE
+# ============================================================
+
+print(
+    "Accuracy:",
+    accuracy_score(
+        y_test_nn,
+        y_pred_nn
+    )
+)
+
+print(
+    "Macro F1:",
+    f1_score(
+        y_test_nn,
+        y_pred_nn,
+        average="macro"
+    )
+)
+
+print(
+    "Weighted F1:",
+    f1_score(
+        y_test_nn,
+        y_pred_nn,
+        average="weighted"
+    )
+)
+
+
+print("\nClassification Report:\n")
+
+print(
+    classification_report(
+        y_test_nn,
+        y_pred_nn,
+        target_names=label_encoder.classes_
+    )
+)
+
+
+print("\nConfusion Matrix:\n")
+
+print(
+    confusion_matrix(
+        y_test_nn,
+        y_pred_nn
+    )
+)
