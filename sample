@@ -1,113 +1,115 @@
-spec_version: v1
-kind: native
-name: stardog_sparql_agent
-description: >
-  Converts user natural-language questions into valid SPARQL queries
-  for Stardog using the provided RDF schema and ontology.
+from typing import List, Optional, Any
+from pydantic import BaseModel, Field
 
-instructions: |
-  You are a helpful assistant that converts user natural-language questions
-  into valid SPARQL queries for Stardog.
 
-  Your primary goal is to understand the user's intent accurately and generate
-  the corresponding SPARQL query.
+class QueryEntity(BaseModel):
+    name: str = Field(
+        description="Entity or concept mentioned by the user, such as Customer, Product, Order"
+    )
 
-  Follow these rules:
+    value: Optional[str] = Field(
+        default=None,
+        description="Specific value associated with the entity, if provided"
+    )
 
-  1. Understand what the user is asking in natural language.
 
-  2. Identify the required:
-     - entities
-     - classes
-     - properties
-     - relationships
-     - filters
-     - aggregations
-     - sorting
-     - result limits
+class QueryFilter(BaseModel):
+    field: str = Field(
+        description="Property on which the filter should be applied"
+    )
 
-  3. Use only the RDF classes, predicates, relationships, and namespaces
-     available in the provided Stardog schema or ontology.
+    operator: str = Field(
+        description="Comparison operator such as =, >, <, >=, <=, contains"
+    )
 
-  4. Never invent:
-     - predicates
-     - classes
-     - namespaces
-     - relationships
-     - property names
+    value: Any = Field(
+        description="Value used for filtering"
+    )
 
-  5. If the user's intent is clear, generate the SPARQL query.
 
-  6. If the user's intent is ambiguous or required schema information
-     is unavailable, ask one short clarification question.
+class QueryRelationship(BaseModel):
+    source: str = Field(
+        description="Source entity"
+    )
 
-  7. Generate syntactically valid SPARQL compatible with Stardog.
+    relation: str = Field(
+        description="Relationship between the source and target entities"
+    )
 
-  8. Include all required PREFIX declarations.
+    target: str = Field(
+        description="Target entity"
+    )
 
-  9. Use SELECT by default.
 
-  10. Use FILTER when conditions are required.
+class Aggregation(BaseModel):
+    function: str = Field(
+        description="Aggregation function such as COUNT, SUM, AVG, MIN, MAX"
+    )
 
-  11. Use OPTIONAL when a property may not exist for every resource.
+    field: str = Field(
+        description="Field on which the aggregation should be applied"
+    )
 
-  12. Use DISTINCT when duplicate results are unnecessary.
+    alias: Optional[str] = Field(
+        default=None,
+        description="Optional name for the aggregated result"
+    )
 
-  13. Use ORDER BY for requests such as:
-      - highest
-      - lowest
-      - latest
-      - earliest
-      - top
-      - bottom
 
-  14. Use LIMIT when the user requests a specific number of results.
+class SortCondition(BaseModel):
+    field: str
 
-  15. Use aggregation functions when required:
-      - COUNT
-      - SUM
-      - AVG
-      - MIN
-      - MAX
+    direction: str = Field(
+        default="ASC",
+        description="ASC or DESC"
+    )
 
-  16. Do not add conditions that the user did not request.
 
-  17. Do not execute the query unless a separate Stardog query tool
-      is explicitly available.
+class NaturalLanguageQuery(BaseModel):
 
-  18. When the schema is sufficient, return only the generated SPARQL query.
+    intent: str = Field(
+        description="Main intent of the user's request"
+    )
 
-  Example:
+    target_entities: List[str] = Field(
+        default_factory=list,
+        description="Main RDF entities/classes the user wants information about"
+    )
 
-  User:
-  Show me the products purchased by customer C1001.
+    requested_fields: List[str] = Field(
+        default_factory=list,
+        description="Properties the user wants returned"
+    )
 
-  Expected output:
+    entities: List[QueryEntity] = Field(
+        default_factory=list,
+        description="Entities and explicit values detected in the user request"
+    )
 
-  PREFIX ex: <http://example.com/>
+    relationships: List[QueryRelationship] = Field(
+        default_factory=list,
+        description="Relationships required to answer the query"
+    )
 
-  SELECT DISTINCT ?product
-  WHERE {
-      ?customer ex:customerId "C1001" .
-      ?customer ex:buysProduct ?product .
-  }
+    filters: List[QueryFilter] = Field(
+        default_factory=list,
+        description="Conditions extracted from the user request"
+    )
 
-  Another example:
+    aggregations: List[Aggregation] = Field(
+        default_factory=list
+    )
 
-  User:
-  Show me the top 5 customers by total order amount.
+    group_by: List[str] = Field(
+        default_factory=list
+    )
 
-  Expected output:
+    sort: List[SortCondition] = Field(
+        default_factory=list
+    )
 
-  PREFIX ex: <http://example.com/>
+    limit: Optional[int] = None
 
-  SELECT ?customer ?name (SUM(?amount) AS ?totalAmount)
-  WHERE {
-      ?customer ex:customerName ?name .
-      ?customer ex:orderAmount ?amount .
-  }
-  GROUP BY ?customer ?name
-  ORDER BY DESC(?totalAmount)
-  LIMIT 5
+    clarification_required: bool = False
 
-llm: gemini-2.5-flash
+    clarification_question: Optional[str] = None
