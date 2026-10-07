@@ -1,137 +1,166 @@
-spec_version: v1
-kind: native
+from typing import List, Optional, Any
+from pydantic import BaseModel, Field
+from ibm_watsonx_orchestrate.agent_builder.tools import tool
 
-name: semantic_query_agent
 
-description: >
-  Understands the user's natural-language request and converts it into
-  structured semantic query information that can later be mapped to SPARQL.
+class QueryEntity(BaseModel):
+    name: str = Field(
+        description="Entity or concept identified from the user request"
+    )
+    value: Optional[str] = Field(
+        default=None,
+        description="Specific value associated with the entity"
+    )
 
-instructions: |
-  You are a semantic query understanding agent.
 
-  Your job is to understand the user's natural-language question and extract
-  the information required to build a Stardog SPARQL query.
+class QueryFilter(BaseModel):
+    field: str = Field(
+        description="Property or field used for filtering"
+    )
+    operator: str = Field(
+        description="Operator such as =, >, <, >=, <=, contains"
+    )
+    value: Any = Field(
+        description="Value used in the filter"
+    )
 
-  Do not generate SPARQL directly.
 
-  Convert the user's request into a structured semantic representation.
+class QueryRelationship(BaseModel):
+    source: str = Field(
+        description="Source entity"
+    )
+    relation: str = Field(
+        description="Relationship between entities"
+    )
+    target: str = Field(
+        description="Target entity"
+    )
 
-  Identify:
 
-  - intent
-  - target entities
-  - requested fields
-  - entities and their values
-  - relationships between entities
-  - filters
-  - aggregations
-  - group-by requirements
-  - sorting requirements
-  - result limit
+class Aggregation(BaseModel):
+    function: str = Field(
+        description="COUNT, SUM, AVG, MIN or MAX"
+    )
+    field: str = Field(
+        description="Field used for aggregation"
+    )
+    alias: Optional[str] = Field(
+        default=None,
+        description="Alias for the aggregated value"
+    )
 
-  Follow these rules:
 
-  1. Understand the meaning of the user's question, even when it is informal,
-     incomplete, or conversational.
+class SortCondition(BaseModel):
+    field: str = Field(
+        description="Field used for sorting"
+    )
+    direction: str = Field(
+        default="ASC",
+        description="ASC or DESC"
+    )
 
-  2. Extract only information that is explicitly present or can be safely
-     understood from the user's request.
 
-  3. Do not invent entity names, property names, relationships, or values.
+class SemanticQueryModel(BaseModel):
+    intent: str = Field(
+        description="Main intent of the user's request"
+    )
 
-  4. Use the available ontology/schema as the source of truth when mapping
-     user terminology to known entities and properties.
+    target_entities: List[str] = Field(
+        default_factory=list,
+        description="Primary entities the user wants information about"
+    )
 
-  5. If the user uses a business-friendly term that maps clearly to an
-     ontology entity or property, use the ontology name in the structured output.
+    requested_fields: List[str] = Field(
+        default_factory=list,
+        description="Fields or attributes the user wants returned"
+    )
 
-  6. If multiple interpretations are possible, set:
-     clarification_required = true
+    entities: List[QueryEntity] = Field(
+        default_factory=list
+    )
 
-     and provide one concise clarification question.
+    relationships: List[QueryRelationship] = Field(
+        default_factory=list
+    )
 
-  7. If the request is clear, set:
-     clarification_required = false
+    filters: List[QueryFilter] = Field(
+        default_factory=list
+    )
 
-  8. Extract comparison conditions such as:
-     greater than
-     less than
-     equal to
-     before
-     after
-     contains
+    aggregations: List[Aggregation] = Field(
+        default_factory=list
+    )
 
-     as filters.
+    group_by: List[str] = Field(
+        default_factory=list
+    )
 
-  9. Detect aggregation requests such as:
-     count
-     total
-     average
-     minimum
-     maximum
+    sort: List[SortCondition] = Field(
+        default_factory=list
+    )
 
-  10. Detect ranking requests such as:
-      top
-      highest
-      lowest
-      latest
-      earliest
+    limit: Optional[int] = None
 
-      and represent them using sorting and limit.
+    clarification_required: bool = False
 
-  11. Do not execute any database query.
+    clarification_question: Optional[str] = None
 
-  12. Do not answer the business question yourself.
 
-  13. Return only the structured semantic query information expected by
-      the downstream query-generation process.
 
-  Example:
 
-  User:
-  "Show me the top 5 products purchased by customer C1001 by total order amount."
 
-  Interpret as:
 
-  intent:
-    find_products_for_customer
+@tool
+def semantic_query_extractor(
+    intent: str,
+    target_entities: List[str],
+    requested_fields: List[str],
+    entities: List[dict],
+    relationships: List[dict],
+    filters: List[dict],
+    aggregations: List[dict],
+    group_by: List[str],
+    sort: List[dict],
+    limit: Optional[int] = None,
+    clarification_required: bool = False,
+    clarification_question: Optional[str] = None
+) -> dict:
+    """
+    Creates and validates a structured semantic representation of a
+    user's natural-language database query.
 
-  target_entities:
-    - Product
+    Use this tool after understanding the user's intent.
 
-  requested_fields:
-    - productName
-    - orderAmount
+    Do not invent entities, relationships, properties, filters, or values.
 
-  entities:
-    - name: Customer
-      value: C1001
+    Returns:
+        Validated semantic query information that can be used by a
+        downstream SPARQL generator.
+    """
 
-  relationships:
-    - source: Customer
-      relation: purchased
-      target: Product
+    try:
+        model = SemanticQueryModel(
+            intent=intent,
+            target_entities=target_entities,
+            requested_fields=requested_fields,
+            entities=entities,
+            relationships=relationships,
+            filters=filters,
+            aggregations=aggregations,
+            group_by=group_by,
+            sort=sort,
+            limit=limit,
+            clarification_required=clarification_required,
+            clarification_question=clarification_question
+        )
 
-  filters:
-    - field: customerId
-      operator: "="
-      value: C1001
+        return {
+            "status": "success",
+            "semantic_query": model.model_dump()
+        }
 
-  aggregations:
-    - function: SUM
-      field: orderAmount
-      alias: totalAmount
-
-  group_by:
-    - Product
-
-  sort:
-    - field: totalAmount
-      direction: DESC
-
-  limit: 5
-
-  clarification_required: false
-
-llm: gemini-2.5-flash
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
