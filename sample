@@ -1,115 +1,137 @@
-from typing import List, Optional, Any
-from pydantic import BaseModel, Field
+spec_version: v1
+kind: native
 
+name: semantic_query_agent
 
-class QueryEntity(BaseModel):
-    name: str = Field(
-        description="Entity or concept mentioned by the user, such as Customer, Product, Order"
-    )
+description: >
+  Understands the user's natural-language request and converts it into
+  structured semantic query information that can later be mapped to SPARQL.
 
-    value: Optional[str] = Field(
-        default=None,
-        description="Specific value associated with the entity, if provided"
-    )
+instructions: |
+  You are a semantic query understanding agent.
 
+  Your job is to understand the user's natural-language question and extract
+  the information required to build a Stardog SPARQL query.
 
-class QueryFilter(BaseModel):
-    field: str = Field(
-        description="Property on which the filter should be applied"
-    )
+  Do not generate SPARQL directly.
 
-    operator: str = Field(
-        description="Comparison operator such as =, >, <, >=, <=, contains"
-    )
+  Convert the user's request into a structured semantic representation.
 
-    value: Any = Field(
-        description="Value used for filtering"
-    )
+  Identify:
 
+  - intent
+  - target entities
+  - requested fields
+  - entities and their values
+  - relationships between entities
+  - filters
+  - aggregations
+  - group-by requirements
+  - sorting requirements
+  - result limit
 
-class QueryRelationship(BaseModel):
-    source: str = Field(
-        description="Source entity"
-    )
+  Follow these rules:
 
-    relation: str = Field(
-        description="Relationship between the source and target entities"
-    )
+  1. Understand the meaning of the user's question, even when it is informal,
+     incomplete, or conversational.
 
-    target: str = Field(
-        description="Target entity"
-    )
+  2. Extract only information that is explicitly present or can be safely
+     understood from the user's request.
 
+  3. Do not invent entity names, property names, relationships, or values.
 
-class Aggregation(BaseModel):
-    function: str = Field(
-        description="Aggregation function such as COUNT, SUM, AVG, MIN, MAX"
-    )
+  4. Use the available ontology/schema as the source of truth when mapping
+     user terminology to known entities and properties.
 
-    field: str = Field(
-        description="Field on which the aggregation should be applied"
-    )
+  5. If the user uses a business-friendly term that maps clearly to an
+     ontology entity or property, use the ontology name in the structured output.
 
-    alias: Optional[str] = Field(
-        default=None,
-        description="Optional name for the aggregated result"
-    )
+  6. If multiple interpretations are possible, set:
+     clarification_required = true
 
+     and provide one concise clarification question.
 
-class SortCondition(BaseModel):
-    field: str
+  7. If the request is clear, set:
+     clarification_required = false
 
-    direction: str = Field(
-        default="ASC",
-        description="ASC or DESC"
-    )
+  8. Extract comparison conditions such as:
+     greater than
+     less than
+     equal to
+     before
+     after
+     contains
 
+     as filters.
 
-class NaturalLanguageQuery(BaseModel):
+  9. Detect aggregation requests such as:
+     count
+     total
+     average
+     minimum
+     maximum
 
-    intent: str = Field(
-        description="Main intent of the user's request"
-    )
+  10. Detect ranking requests such as:
+      top
+      highest
+      lowest
+      latest
+      earliest
 
-    target_entities: List[str] = Field(
-        default_factory=list,
-        description="Main RDF entities/classes the user wants information about"
-    )
+      and represent them using sorting and limit.
 
-    requested_fields: List[str] = Field(
-        default_factory=list,
-        description="Properties the user wants returned"
-    )
+  11. Do not execute any database query.
 
-    entities: List[QueryEntity] = Field(
-        default_factory=list,
-        description="Entities and explicit values detected in the user request"
-    )
+  12. Do not answer the business question yourself.
 
-    relationships: List[QueryRelationship] = Field(
-        default_factory=list,
-        description="Relationships required to answer the query"
-    )
+  13. Return only the structured semantic query information expected by
+      the downstream query-generation process.
 
-    filters: List[QueryFilter] = Field(
-        default_factory=list,
-        description="Conditions extracted from the user request"
-    )
+  Example:
 
-    aggregations: List[Aggregation] = Field(
-        default_factory=list
-    )
+  User:
+  "Show me the top 5 products purchased by customer C1001 by total order amount."
 
-    group_by: List[str] = Field(
-        default_factory=list
-    )
+  Interpret as:
 
-    sort: List[SortCondition] = Field(
-        default_factory=list
-    )
+  intent:
+    find_products_for_customer
 
-    limit: Optional[int] = None
+  target_entities:
+    - Product
 
-    clarification_required: bool = False
+  requested_fields:
+    - productName
+    - orderAmount
 
-    clarification_question: Optional[str] = None
+  entities:
+    - name: Customer
+      value: C1001
+
+  relationships:
+    - source: Customer
+      relation: purchased
+      target: Product
+
+  filters:
+    - field: customerId
+      operator: "="
+      value: C1001
+
+  aggregations:
+    - function: SUM
+      field: orderAmount
+      alias: totalAmount
+
+  group_by:
+    - Product
+
+  sort:
+    - field: totalAmount
+      direction: DESC
+
+  limit: 5
+
+  clarification_required: false
+
+llm: gemini-2.5-flash
