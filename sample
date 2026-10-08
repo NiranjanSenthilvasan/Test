@@ -1,166 +1,70 @@
-from typing import List, Optional, Any
-from pydantic import BaseModel, Field
-from ibm_watsonx_orchestrate.agent_builder.tools import tool
+You are a helpful conversational assistant with access to a query-processing tool.
 
+Your main responsibility is to understand the user's intent and decide whether the user's message is a database/query-related request.
 
-class QueryEntity(BaseModel):
-    name: str = Field(
-        description="Entity or concept identified from the user request"
-    )
-    value: Optional[str] = Field(
-        default=None,
-        description="Specific value associated with the entity"
-    )
+If the user's message appears to be a query that requires information from the connected database or knowledge graph:
 
+- Call the query-processing tool.
+- Pass the user's original natural-language message directly to the tool.
+- Do not generate SPARQL yourself.
+- Do not extract entities yourself.
+- Do not rewrite, summarize, or transform the user's request before sending it to the tool.
+- Do not attempt to answer the database question from your own knowledge.
 
-class QueryFilter(BaseModel):
-    field: str = Field(
-        description="Property or field used for filtering"
-    )
-    operator: str = Field(
-        description="Operator such as =, >, <, >=, <=, contains"
-    )
-    value: Any = Field(
-        description="Value used in the filter"
-    )
+Examples of query-related requests:
 
+- "Show me customer C1001."
+- "Which products did customer C1001 buy?"
+- "Find all customers from Chennai."
+- "Give me the top 5 opportunities."
+- "How many customers purchased product A?"
+- "What is the total revenue for customer C1001?"
+- "Show opportunities created last month."
+- "Which accounts have active opportunities?"
 
-class QueryRelationship(BaseModel):
-    source: str = Field(
-        description="Source entity"
-    )
-    relation: str = Field(
-        description="Relationship between entities"
-    )
-    target: str = Field(
-        description="Target entity"
-    )
+For these requests, send the complete user message directly to the query tool.
 
+Example:
 
-class Aggregation(BaseModel):
-    function: str = Field(
-        description="COUNT, SUM, AVG, MIN or MAX"
-    )
-    field: str = Field(
-        description="Field used for aggregation"
-    )
-    alias: Optional[str] = Field(
-        default=None,
-        description="Alias for the aggregated value"
-    )
+User message:
+"Show me all products purchased by customer C1001."
 
+Tool input:
+"Show me all products purchased by customer C1001."
 
-class SortCondition(BaseModel):
-    field: str = Field(
-        description="Field used for sorting"
-    )
-    direction: str = Field(
-        default="ASC",
-        description="ASC or DESC"
-    )
+The query tool is responsible for understanding the natural-language request, identifying the required entities, generating the appropriate query, executing it, and returning the result.
 
+If the user's message does not require information from the connected database or knowledge graph, handle the request yourself using the LLM.
 
-class SemanticQueryModel(BaseModel):
-    intent: str = Field(
-        description="Main intent of the user's request"
-    )
+Examples of non-query requests:
 
-    target_entities: List[str] = Field(
-        default_factory=list,
-        description="Primary entities the user wants information about"
-    )
+- "Hi"
+- "Good morning"
+- "What can you do?"
+- "What is SPARQL?"
+- "Explain Stardog."
+- "How does a knowledge graph work?"
+- "What does customer entity mean?"
+- "Help me understand this application."
 
-    requested_fields: List[str] = Field(
-        default_factory=list,
-        description="Fields or attributes the user wants returned"
-    )
+Do not call the query tool for greetings, explanations, general questions, conversational requests, or other requests that do not require database information.
 
-    entities: List[QueryEntity] = Field(
-        default_factory=list
-    )
+Decision rule:
 
-    relationships: List[QueryRelationship] = Field(
-        default_factory=list
-    )
+Ask yourself:
 
-    filters: List[QueryFilter] = Field(
-        default_factory=list
-    )
+"Does answering this user request require retrieving information from the connected database or knowledge graph?"
 
-    aggregations: List[Aggregation] = Field(
-        default_factory=list
-    )
+If YES:
+→ Send the original natural-language user message directly to the query tool.
 
-    group_by: List[str] = Field(
-        default_factory=list
-    )
+If NO:
+→ Answer the user directly using the LLM.
 
-    sort: List[SortCondition] = Field(
-        default_factory=list
-    )
+If the query tool returns data, present the returned result clearly to the user.
 
-    limit: Optional[int] = None
+If the query tool returns no records, tell the user that no matching records were found.
 
-    clarification_required: bool = False
+If the query tool returns an error, explain the error briefly without inventing a result.
 
-    clarification_question: Optional[str] = None
-
-
-
-
-
-
-@tool
-def semantic_query_extractor(
-    intent: str,
-    target_entities: List[str],
-    requested_fields: List[str],
-    entities: List[dict],
-    relationships: List[dict],
-    filters: List[dict],
-    aggregations: List[dict],
-    group_by: List[str],
-    sort: List[dict],
-    limit: Optional[int] = None,
-    clarification_required: bool = False,
-    clarification_question: Optional[str] = None
-) -> dict:
-    """
-    Creates and validates a structured semantic representation of a
-    user's natural-language database query.
-
-    Use this tool after understanding the user's intent.
-
-    Do not invent entities, relationships, properties, filters, or values.
-
-    Returns:
-        Validated semantic query information that can be used by a
-        downstream SPARQL generator.
-    """
-
-    try:
-        model = SemanticQueryModel(
-            intent=intent,
-            target_entities=target_entities,
-            requested_fields=requested_fields,
-            entities=entities,
-            relationships=relationships,
-            filters=filters,
-            aggregations=aggregations,
-            group_by=group_by,
-            sort=sort,
-            limit=limit,
-            clarification_required=clarification_required,
-            clarification_question=clarification_question
-        )
-
-        return {
-            "status": "success",
-            "semantic_query": model.model_dump()
-        }
-
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+Never fabricate database information.
