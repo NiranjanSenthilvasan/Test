@@ -1,0 +1,37 @@
+
+WITH ordered_messages AS (
+    SELECT
+        session_id,
+        turn_index,
+        role,
+        content::jsonb ->> 'text' AS message,
+        created_at,
+        LEAD(role) OVER (
+            PARTITION BY session_id
+            ORDER BY turn_index
+        ) AS next_role,
+        LEAD(created_at) OVER (
+            PARTITION BY session_id
+            ORDER BY turn_index
+        ) AS response_time,
+        LEAD(content::jsonb ->> 'text') OVER (
+            PARTITION BY session_id
+            ORDER BY turn_index
+        ) AS response
+    FROM chat_messages
+    WHERE session_id = '18e69e1f-92ca-4caa-bd9b-c99d325742bf'
+)
+SELECT
+    session_id,
+    message AS user_query,
+    response AS assistant_response,
+    created_at AS request_time,
+    response_time,
+    ROUND(
+        EXTRACT(EPOCH FROM (response_time - created_at))::numeric,
+        2
+    ) AS duration_seconds
+FROM ordered_messages
+WHERE role = 'user'
+  AND next_role = 'assistant'
+ORDER BY turn_index;
