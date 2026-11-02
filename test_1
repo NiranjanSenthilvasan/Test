@@ -1,87 +1,138 @@
-model_balanced = CatBoostClassifier(
+US-01: Interpret Imperfect Natural Language Questions
+5 SP
 
-    iterations=500,
+As a business user, I want the chatbot to understand abbreviations, shorthand, and misspelled questions so that I can retrieve account information without using exact terminology.
 
-    depth=6,
+Acceptance criteria
+- Recognizes common abbreviations, typos, and shorthand.
+- Maps questions to applicable REQ-01 through REQ-10 capabilities.
+- Does not guess missing account identifiers, relationships, or data values.
+- Validates against business-provided sample questions.
 
-    learning_rate=0.05,
 
-    loss_function='MultiClass',
+US-02: Handle Ambiguous Questions with Targeted Follow-ups
+5 SP
 
-    eval_metric='MultiClass',
+As a business user, I want the chatbot to ask a specific clarification question when my request is unclear so that it retrieves information for the correct account.
 
-    auto_class_weights='Balanced',
+Acceptance criteria
+- Detects missing account numbers, country codes, and unclear account scope.
+- Asks one concise, relevant follow-up at a time.
+- Uses the clarification to continue the original request.
+- Identifies requests outside the documented delivery scope instead of inventing answers.
 
-    random_seed=42,
 
-    verbose=100
+US-03: Maintain Account Context Across Conversations
+5 SP
 
-)
+As a business user, I want the chatbot to remember the current account during a conversation so that I do not need to repeat the account number for every question.
 
-model_balanced.fit(
+Acceptance criteria
+- Retains the current account and relevant conversation scope.
+- Resolves subsequent questions against the selected account.
+- Supports multi-turn queries without unnecessary clarification.
+- Does not carry context incorrectly between unrelated conversations.
 
-    X_train,
 
-    y_train,
+US-04: Handle Account Switching and Context Reconfirmation
+3 SP
 
-    cat_features=categorical_cols,
+As a business user, I want the chatbot to recognize when I switch accounts so that subsequent responses use the correct customer information.
 
-    eval_set=(X_test, y_test),
+Acceptance criteria
+- Identifies when a new account is introduced.
+- Updates the active account context.
+- Requests reconfirmation when multiple accounts could apply.
+- Prevents data from the previous account being used incorrectly.
 
-    early_stopping_rounds=50
 
-)
+Feature 2 – Dynamic Output & Excel Export
+US-05: Display Dynamic Results in Chatbot UI
+5 SP
 
-y_pred_balanced = model_balanced.predict(X_test).reshape(-1)
+As a business user, I want account information displayed dynamically in the chatbot so that I can review the requested details clearly.
 
-print("Accuracy:",
+Acceptance criteria
+- Displays applicable account fields in a readable format.
+- Supports varying response fields and account types.
+- Presents multiple account results clearly.
+- Shows unavailable information without generating fabricated values.
 
-      accuracy_score(y_test, y_pred_balanced))
 
-print("Macro F1:",
+US-06: Export Customer Account Results to Standardized Excel
+8 SP
 
-      f1_score(
+As a business user, I want to export the retrieved account information to Excel so that I can share and analyze results using the approved standard layout.
 
-          y_test,
+Acceptance criteria
+- Provides an Excel export option for in-scope answers.
+- Uses the approved golden Excel artifact with consistent tabs and columns for every account.
+- Preserves accurate values and the applicable account identifiers.
+- Supports unavailable fields in the standard format.
+- Does not allow external emailing of exported data through the application.
 
-          y_pred_balanced,
 
-          average='macro'
+US-07: Handle Unavailable and Out-of-Scope Fields
+3 SP
 
-      ))
+As a business user, I want unavailable or out-of-scope information clearly identified so that I can distinguish missing data from valid account values.
 
-print("Weighted F1:",
+Acceptance criteria
+- Shows blank or N/A according to the approved field rules.
+- Keeps the standard Excel schema even when fields are unavailable.
+- Does not infer or manufacture missing data.
+- Ensures consistent values between chatbot display and Excel export.
 
-      f1_score(
 
-          y_test,
+Feature 3 – Response Traceability & Explanation
+This is especially relevant to your work with the watsonx Orchestrate agent and the Shippy React interface.
+US-08: Capture Agent Execution Traceability and Data Sources
+8 SP
 
-          y_pred_balanced,
+As a business user, I want to understand which account, requirement, and data sources were used to generate a response so that I can verify its accuracy.
 
-          average='weighted'
+Acceptance criteria
+- Captures the account used for each response.
+- Records which requirement or intent was matched.
+- Identifies the source used for each returned field, where source metadata is available.
+- Records whether conversation context or account relationships were reused.
+- Identifies unavailable fields and the reason when known.
+- Does not present fabricated execution information.
 
-      ))
 
-print(
+US-09: Display Collapsible Response Explanation in Chatbot
+5 SP
 
-    classification_report(
+As a business user, I want to expand a traceability section beneath every answer so that I can review how the chatbot obtained the information.
 
-        y_test,
+Acceptance criteria
+- Provides an automatically displayed collapsible explanation section with data answers.
+- Shows the matched requirement, account, field sources, and relevant execution steps.
+- Allows users to ask further questions about the explanation.
+- Keeps the existing chatbot response format intact.
 
-        y_pred_balanced
 
-    )
+Implementation distinction: REQ-15 can be fulfilled using observable agent execution events, source provenance, and concise explanations. This is different from exposing the model's private internal chain-of-thought, which is not reliably available as an execution trace.
+Feature 4 – Data Access Control
+US-10: Enforce Authorization for Customer Data Retrieval
+8 SP
 
-)
+As an authorized business user, I want the chatbot to enforce account data access permissions so that sensitive customer information is available only to approved users.
 
-print(
+Acceptance criteria
+- Validates user authorization before releasing account data.
+- Enforces permissions in the backend, not only in the UI.
+- Prevents unauthorized retrieval through alternate account queries.
+- Applies the same access restrictions to Excel exports and traceability details.
 
-    confusion_matrix(
 
-        y_test,
+US-11: Handle Unauthorized Data Access Requests
+3 SP
 
-        y_pred_balanced
+As a business user, I want a clear response when I am not authorized to view account information so that protected data remains secure.
 
-    )
-
-)
+Acceptance criteria
+- Returns no protected account data to unauthorized users.
+- Displays a suitable access-denied message without leaking sensitive details.
+- Supports positive and negative permission test cases.
+- Implements field masking only if the business confirms that requirement.
