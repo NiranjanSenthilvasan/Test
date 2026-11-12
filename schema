@@ -229,3 +229,118 @@
     }
 }
 
+
+
+"PEA Users": {
+    "description": (
+        "Program Enrolment Application (PEA) is an internal "
+        "UPS application used for creating and managing "
+        "UPS User IDs and UPS accounts. It maintains user "
+        "profiles, contact information, associated UPS "
+        "accounts, and default shipping and payment "
+        "account configurations."
+    ),
+    "keywords": [
+        "pea",
+        "pea user",
+        "pea users",
+        "program enrolment application",
+        "program enrollment application",
+        "ups user id",
+        "ups user management",
+        "ups account registration",
+        "ups account enrollment",
+        "user profile",
+        "user access",
+        "user account mapping",
+        "associated ups accounts",
+        "linked accounts",
+        "account association",
+        "default shipping account",
+        "default payment account",
+        "primary shipping account",
+        "primary payment account"
+    ],
+    "columns": [
+        "Full Name",
+        "User ID",
+        "Email",
+        "Address",
+        "Phone",
+        "Associated Accounts Below"
+    ],
+    "sections": {
+        "Associated Accounts": {
+            "description": (
+                "UPS accounts associated with the PEA user, "
+                "including account contact details, country "
+                "codes, and default shipping or payment "
+                "account designations."
+            ),
+            "columns": [
+                "Account Number",
+                "Contact Name",
+                "Country Code",
+                "Default Shipping Account",
+                "Default Payment Account"
+            ]
+        }
+    },
+    "field_aliases": {
+        "Full Name": [
+            "user full name",
+            "registered user name",
+            "pea user name"
+        ],
+        "User ID": [
+            "ups user id",
+            "ups login id",
+            "registered user id",
+            "pea user id"
+        ],
+        "Email": [
+            "user email",
+            "registered email",
+            "ups user email"
+        ],
+        "Address": [
+            "registered user address",
+            "user address"
+        ],
+        "Phone": [
+            "user phone number",
+            "registered contact number",
+            "user contact number"
+        ],
+        "Associated Accounts Below": [
+            "associated ups accounts",
+            "linked ups accounts",
+            "accounts assigned to user",
+            "user account associations"
+        ],
+        "Account Number": [
+            "ups account number",
+            "associated account number",
+            "linked account number"
+        ],
+        "Contact Name": [
+            "account contact name",
+            "associated account contact"
+        ],
+        "Country Code": [
+            "account country code",
+            "country code"
+        ],
+        "Default Shipping Account": [
+            "default ups shipping account",
+            "primary shipping account",
+            "preferred shipping account"
+        ],
+        "Default Payment Account": [
+            "default ups payment account",
+            "primary payment account",
+            "preferred payment account"
+        ]
+    }
+}
+
