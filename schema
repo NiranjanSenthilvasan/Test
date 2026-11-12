@@ -1,0 +1,110 @@
+
+"Center Contact Info": {
+    "description": (
+        "UPS center contact information, fulfillment locations, "
+        "center addresses, center managers, contact names, "
+        "email addresses, phone numbers, and fax details"
+    ),
+    "keywords": [
+        "center contact",
+        "center contact info",
+        "center contact information",
+        "center details",
+        "center address",
+        "center manager",
+        "contact person",
+        "contact name",
+        "contact email",
+        "contact number",
+        "phone number",
+        "fax number",
+        "fulfillment center",
+        "ups center",
+        "center location",
+        "location details"
+    ],
+    "columns": [
+        "Location",
+        "City, State",
+        "Account#",
+        "Address",
+        "SLIC",
+        "Center Name",
+        "Center Address",
+        "Contact Title",
+        "Contact Name",
+        "Contact Email",
+        "Phone #1",
+        "Phone #2",
+        "Fax"
+    ],
+    "field_aliases": {
+        "Location": [
+            "fulfillment location",
+            "warehouse location",
+            "facility location"
+        ],
+        "City, State": [
+            "city",
+            "state",
+            "city and state"
+        ],
+        "Account#": [
+            "account number",
+            "account id",
+            "account"
+        ],
+        "Address": [
+            "location address",
+            "facility address",
+            "shipping location address"
+        ],
+        "SLIC": [
+            "slic",
+            "slic code",
+            "sorting location code"
+        ],
+        "Center Name": [
+            "center name",
+            "ups center",
+            "distribution center"
+        ],
+        "Center Address": [
+            "center address",
+            "ups center address"
+        ],
+        "Contact Title": [
+            "contact title",
+            "job title",
+            "designation",
+            "role"
+        ],
+        "Contact Name": [
+            "contact person",
+            "contact name",
+            "manager name",
+            "point of contact"
+        ],
+        "Contact Email": [
+            "email",
+            "email address",
+            "contact email",
+            "manager email"
+        ],
+        "Phone #1": [
+            "primary phone",
+            "primary contact number",
+            "phone number",
+            "telephone"
+        ],
+        "Phone #2": [
+            "secondary phone",
+            "alternate phone",
+            "alternate contact number"
+        ],
+        "Fax": [
+            "fax",
+            "fax number"
+        ]
+    }
+}
