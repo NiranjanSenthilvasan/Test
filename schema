@@ -344,3 +344,145 @@
     }
 }
 
+
+
+
+"Billing Center": {
+    "description": (
+        "UPS billing center information, account billing "
+        "configurations, billing addresses, mailing plans, "
+        "invoice delivery settings, billing contacts, "
+        "UPS account user access, and administrator roles. "
+        "Contains account-level billing records and user "
+        "permissions associated with UPS accounts."
+    ),
+    "keywords": [
+        "billing center",
+        "billing information",
+        "billing details",
+        "billing account",
+        "billing address",
+        "billing contact",
+        "billing configuration",
+        "billing preferences",
+        "invoice address",
+        "invoice delivery",
+        "mailing plan",
+        "consolidated mailing",
+        "billing administrator",
+        "billing user",
+        "billing access",
+        "billing role",
+        "account administrator",
+        "billing eligibility",
+        "billing attention",
+        "billing name",
+        "payment billing"
+    ],
+    "columns": [
+        "User Name",
+        "Email",
+        "UPS Account Number",
+        "Role"
+    ],
+    "sections": {
+        "Billing Account Information": {
+            "description": (
+                "Account-level billing configuration, "
+                "mailing preferences, billing names, "
+                "attention details and billing address."
+            ),
+            "columns": [
+                "Act_Num",
+                "Mailing_Plan",
+                "CPP_Export",
+                "IAS_CCard_Elig",
+                "BIL_Name",
+                "BIL_Attention",
+                "BIL_AdtnlInfo",
+                "BIL_Address",
+                "BIL_City",
+                "BIL_State",
+                "BIL_Zip"
+            ]
+        }
+    },
+    "field_aliases": {
+        "User Name": [
+            "billing user name",
+            "ups billing user",
+            "billing username"
+        ],
+        "Email": [
+            "billing user email",
+            "administrator email",
+            "billing email"
+        ],
+        "UPS Account Number": [
+            "ups billing account number",
+            "billing account number",
+            "account number"
+        ],
+        "Role": [
+            "billing role",
+            "administrator role",
+            "account permissions",
+            "billing permissions"
+        ],
+        "Act_Num": [
+            "account number",
+            "ups account id"
+        ],
+        "Mailing_Plan": [
+            "mailing plan",
+            "billing mailing plan",
+            "consolidated mailing",
+            "invoice mailing preference"
+        ],
+        "CPP_Export": [
+            "cpp export",
+            "cpp export code"
+        ],
+        "IAS_CCard_Elig": [
+            "ias credit card eligibility",
+            "ias card eligibility",
+            "credit card eligibility"
+        ],
+        "BIL_Name": [
+            "billing name",
+            "bill to name",
+            "billing company name",
+            "invoice recipient name"
+        ],
+        "BIL_Attention": [
+            "billing attention",
+            "attention to",
+            "accounts payable contact",
+            "invoice attention"
+        ],
+        "BIL_AdtnlInfo": [
+            "additional billing information",
+            "billing additional info",
+            "billing address details"
+        ],
+        "BIL_Address": [
+            "billing street address",
+            "bill to address",
+            "invoice address"
+        ],
+        "BIL_City": [
+            "billing city",
+            "invoice city"
+        ],
+        "BIL_State": [
+            "billing state",
+            "invoice state"
+        ],
+        "BIL_Zip": [
+            "billing zip",
+            "billing zip code",
+            "billing postal code"
+        ]
+    }
+}
+
