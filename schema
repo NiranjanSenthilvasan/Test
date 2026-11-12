@@ -108,3 +108,124 @@
         ]
     }
 }
+
+
+
+
+"FEEDER": {
+    "description": (
+        "UPS feeder information, feeder responsible locations, "
+        "feeder contact details, feeder phone numbers, "
+        "feeder email addresses, fulfillment locations, "
+        "UPS center information and feeder assignments"
+    ),
+    "keywords": [
+        "feeder",
+        "feeder details",
+        "feeder information",
+        "feeder contact",
+        "feeder contact information",
+        "feeder location",
+        "feeder responsible location",
+        "feeder number",
+        "feeder phone",
+        "feeder email",
+        "feeder assignment",
+        "feeder center",
+        "feeder support",
+        "ups feeder",
+        "feeder operations",
+        "feeder responsible"
+    ],
+    "columns": [
+        "Location",
+        "City, State",
+        "Account#",
+        "Address",
+        "SLIC",
+        "Center Name",
+        "Local UPS Center Address",
+        "Contact Title",
+        "Contact Name",
+        "Contact Email",
+        "Phone #1",
+        "Phone #2",
+        "Fax",
+        "Feeder Responsible Location",
+        "Feeder Number",
+        "Feeder Email"
+    ],
+    "field_aliases": {
+        "Location": [
+            "fulfillment location",
+            "warehouse location",
+            "facility location"
+        ],
+        "City, State": [
+            "city and state",
+            "city state"
+        ],
+        "Account#": [
+            "account number",
+            "account id"
+        ],
+        "Address": [
+            "fulfillment address",
+            "facility address"
+        ],
+        "SLIC": [
+            "slic code",
+            "sorting location code"
+        ],
+        "Center Name": [
+            "ups center name",
+            "assigned center"
+        ],
+        "Local UPS Center Address": [
+            "local ups center address",
+            "local center address"
+        ],
+        "Contact Title": [
+            "contact designation",
+            "contact role"
+        ],
+        "Contact Name": [
+            "feeder contact person",
+            "center contact person"
+        ],
+        "Contact Email": [
+            "center contact email",
+            "contact email address"
+        ],
+        "Phone #1": [
+            "primary contact number",
+            "primary phone"
+        ],
+        "Phone #2": [
+            "secondary contact number",
+            "alternate phone"
+        ],
+        "Fax": [
+            "fax number"
+        ],
+        "Feeder Responsible Location": [
+            "responsible feeder location",
+            "assigned feeder location",
+            "feeder location code",
+            "feeder responsible location"
+        ],
+        "Feeder Number": [
+            "feeder phone number",
+            "feeder contact number",
+            "feeder telephone",
+            "feeder number"
+        ],
+        "Feeder Email": [
+            "feeder email address",
+            "feeder contact email",
+            "feeder mail",
+            "feeder email"
+        ]
+    }
+}
+
