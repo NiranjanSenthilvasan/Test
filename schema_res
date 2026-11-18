@@ -1,0 +1,769 @@
+
+import json
+import re
+from typing import Any
+
+from ibm_watsonx_orchestrate.agent_builder.tools import (
+    tool,
+    ToolPermission
+)
+
+
+# ============================================================
+# TEMPLATE REGISTRY
+# ============================================================
+
+DEFAULT_SCHEMAS = {
+
+    "Pickup": {
+        "description": (
+            "UPS account pickup schedules, daily pickups, "
+            "collection arrangements, pickup locations, "
+            "pickup timings and pickup days"
+        ),
+        "keywords": [
+            "pickup",
+            "pick up",
+            "collection",
+            "pickup schedule",
+            "pickup time",
+            "pickup point",
+            "pickup days",
+            "daily pickup"
+        ],
+        "columns": [
+            "Act_Num",
+            "RR",
+            "DD",
+            "Center",
+            "StartDate",
+            "CustomerID",
+            "PU_Type",
+            "PU_Earlist",
+            "PU_Desired",
+            "PU_Latest",
+            "PU_Notify_By_Time",
+            "PU_Point",
+            "PU_Days"
+        ],
+        "field_aliases": {
+            "Act_Num": ["account number", "account id"],
+            "StartDate": ["start date"],
+            "CustomerID": ["customer id"],
+            "PU_Type": ["pickup type"],
+            "PU_Earlist": ["earliest pickup time"],
+            "PU_Desired": ["desired pickup time"],
+            "PU_Latest": ["latest pickup time"],
+            "PU_Notify_By_Time": ["notification time"],
+            "PU_Point": ["pickup point", "pickup location"],
+            "PU_Days": ["pickup days", "collection days"]
+        }
+    },
+
+    "Center Contact Info": {
+        "description": (
+            "UPS center contact information, fulfillment "
+            "locations, center addresses, center managers, "
+            "contact names, email addresses, phone numbers "
+            "and fax details"
+        ),
+        "keywords": [
+            "center contact",
+            "center contact info",
+            "center contact information",
+            "center details",
+            "center address",
+            "center manager",
+            "contact person",
+            "contact name",
+            "contact email",
+            "contact number",
+            "phone number",
+            "fax number",
+            "fulfillment center",
+            "ups center",
+            "center location",
+            "location details"
+        ],
+        "columns": [
+            "Location",
+            "City, State",
+            "Account#",
+            "Address",
+            "SLIC",
+            "Center Name",
+            "Center Address",
+            "Contact Title",
+            "Contact Name",
+            "Contact Email",
+            "Phone #1",
+            "Phone #2",
+            "Fax"
+        ],
+        "field_aliases": {
+            "Location": [
+                "fulfillment location",
+                "warehouse location",
+                "facility location"
+            ],
+            "City, State": [
+                "city",
+                "state",
+                "city and state"
+            ],
+            "Account#": [
+                "account number",
+                "account id"
+            ],
+            "Address": [
+                "location address",
+                "facility address"
+            ],
+            "SLIC": [
+                "slic code",
+                "sorting location code"
+            ],
+            "Center Name": [
+                "center name",
+                "ups center",
+                "distribution center"
+            ],
+            "Center Address": [
+                "center address",
+                "ups center address"
+            ],
+            "Contact Title": [
+                "contact title",
+                "job title",
+                "designation",
+                "role"
+            ],
+            "Contact Name": [
+                "contact person",
+                "contact name",
+                "manager name"
+            ],
+            "Contact Email": [
+                "email address",
+                "contact email",
+                "manager email"
+            ],
+            "Phone #1": [
+                "primary phone",
+                "primary contact number",
+                "phone number"
+            ],
+            "Phone #2": [
+                "secondary phone",
+                "alternate phone"
+            ],
+            "Fax": [
+                "fax",
+                "fax number"
+            ]
+        }
+    },
+
+    "FEEDER": {
+        "description": (
+            "UPS feeder information, feeder responsible "
+            "locations, feeder contact details, feeder phone "
+            "numbers, feeder email addresses, fulfillment "
+            "locations, UPS center information and assignments"
+        ),
+        "keywords": [
+            "feeder",
+            "feeder details",
+            "feeder information",
+            "feeder contact",
+            "feeder contact information",
+            "feeder location",
+            "feeder responsible location",
+            "feeder number",
+            "feeder phone",
+            "feeder email",
+            "feeder assignment",
+            "feeder center",
+            "feeder support",
+            "ups feeder",
+            "feeder operations"
+        ],
+        "columns": [
+            "Location",
+            "City, State",
+            "Account#",
+            "Address",
+            "SLIC",
+            "Center Name",
+            "Local UPS Center Address",
+            "Contact Title",
+            "Contact Name",
+            "Contact Email",
+            "Phone #1",
+            "Phone #2",
+            "Fax",
+            "Feeder Responsible Location",
+            "Feeder Number",
+            "Feeder Email"
+        ],
+        "field_aliases": {
+            "Location": ["fulfillment location"],
+            "City, State": ["city and state"],
+            "Account#": ["account number", "account id"],
+            "Address": ["facility address"],
+            "SLIC": ["slic code"],
+            "Center Name": ["ups center name"],
+            "Local UPS Center Address": [
+                "local ups center address",
+                "local center address"
+            ],
+            "Contact Title": ["contact designation"],
+            "Contact Name": ["feeder contact person"],
+            "Contact Email": ["center contact email"],
+            "Phone #1": ["primary phone"],
+            "Phone #2": ["secondary phone"],
+            "Fax": ["fax number"],
+            "Feeder Responsible Location": [
+                "responsible feeder location",
+                "assigned feeder location",
+                "feeder location code"
+            ],
+            "Feeder Number": [
+                "feeder phone number",
+                "feeder contact number",
+                "feeder telephone"
+            ],
+            "Feeder Email": [
+                "feeder email address",
+                "feeder contact email"
+            ]
+        }
+    },
+
+    "PEA Users": {
+        "description": (
+            "Program Enrolment Application (PEA), an internal "
+            "UPS application used for creating and managing "
+            "UPS User IDs and UPS accounts. It maintains user "
+            "profiles, contact information, associated UPS "
+            "accounts, and default shipping and payment "
+            "account configurations."
+        ),
+        "keywords": [
+            "pea",
+            "pea user",
+            "pea users",
+            "program enrolment application",
+            "program enrollment application",
+            "ups user id",
+            "ups user management",
+            "ups account registration",
+            "ups account enrollment",
+            "user profile",
+            "user access",
+            "user account mapping",
+            "associated ups accounts",
+            "linked accounts",
+            "account association",
+            "default shipping account",
+            "default payment account"
+        ],
+        "columns": [
+            "Full Name",
+            "User ID",
+            "Email",
+            "Address",
+            "Phone",
+            "Associated Accounts Below"
+        ],
+        "sections": {
+            "Associated Accounts": {
+                "description": (
+                    "UPS accounts associated with the PEA "
+                    "user, including account contact details, "
+                    "country codes, and default shipping or "
+                    "payment account designations."
+                ),
+                "columns": [
+                    "Account Number",
+                    "Contact Name",
+                    "Country Code",
+                    "Default Shipping Account",
+                    "Default Payment Account"
+                ]
+            }
+        },
+        "field_aliases": {
+            "Full Name": [
+                "user full name",
+                "pea user name"
+            ],
+            "User ID": [
+                "ups user id",
+                "ups login id",
+                "pea user id"
+            ],
+            "Email": [
+                "user email",
+                "ups user email"
+            ],
+            "Address": ["user address"],
+            "Phone": ["user phone number"],
+            "Associated Accounts Below": [
+                "associated ups accounts",
+                "linked ups accounts",
+                "accounts assigned to user"
+            ],
+            "Account Number": [
+                "ups account number",
+                "associated account number"
+            ],
+            "Contact Name": [
+                "account contact name"
+            ],
+            "Country Code": [
+                "account country code"
+            ],
+            "Default Shipping Account": [
+                "default ups shipping account",
+                "primary shipping account"
+            ],
+            "Default Payment Account": [
+                "default ups payment account",
+                "primary payment account"
+            ]
+        }
+    },
+
+    "Billing Center": {
+        "description": (
+            "UPS billing center information, account billing "
+            "configurations, billing addresses, mailing plans, "
+            "invoice delivery settings, billing contacts, "
+            "UPS account user access, and administrator roles. "
+            "Contains account-level billing records and user "
+            "permissions associated with UPS accounts."
+        ),
+        "keywords": [
+            "billing",
+            "bill",
+            "billed",
+            "billing center",
+            "billing information",
+            "billing details",
+            "billing account",
+            "billing address",
+            "billing contact",
+            "billing configuration",
+            "billing preferences",
+            "invoice",
+            "invoices",
+            "invoicing",
+            "invoice address",
+            "invoice delivery",
+            "mailing plan",
+            "consolidated mailing",
+            "billing administrator",
+            "billing user",
+            "billing access",
+            "billing role",
+            "account administrator",
+            "billing eligibility",
+            "billing attention",
+            "billing name",
+            "payment billing",
+            "accounts payable"
+        ],
+        "columns": [
+            "User Name",
+            "Email",
+            "UPS Account Number",
+            "Role"
+        ],
+        "sections": {
+            "Billing Account Information": {
+                "description": (
+                    "Account-level billing configuration, "
+                    "mailing preferences, billing names, "
+                    "attention details and billing address."
+                ),
+                "columns": [
+                    "Act_Num",
+                    "Mailing_Plan",
+                    "CPP_Export",
+                    "IAS_CCard_Elig",
+                    "BIL_Name",
+                    "BIL_Attention",
+                    "BIL_AdtnlInfo",
+                    "BIL_Address",
+                    "BIL_City",
+                    "BIL_State",
+                    "BIL_Zip"
+                ]
+            }
+        },
+        "field_aliases": {
+            "User Name": [
+                "billing user name",
+                "ups billing user",
+                "billing username"
+            ],
+            "Email": [
+                "billing user email",
+                "administrator email",
+                "billing email"
+            ],
+            "UPS Account Number": [
+                "ups billing account number",
+                "billing account number"
+            ],
+            "Role": [
+                "billing role",
+                "administrator role",
+                "billing permissions"
+            ],
+            "Act_Num": [
+                "ups account id"
+            ],
+            "Mailing_Plan": [
+                "mailing plan",
+                "billing mailing plan",
+                "consolidated mailing"
+            ],
+            "CPP_Export": [
+                "cpp export",
+                "cpp export code"
+            ],
+            "IAS_CCard_Elig": [
+                "ias credit card eligibility",
+                "ias card eligibility",
+                "credit card eligibility"
+            ],
+            "BIL_Name": [
+                "billing name",
+                "bill to name",
+                "billing company name"
+            ],
+            "BIL_Attention": [
+                "billing attention",
+                "attention to",
+                "accounts payable contact"
+            ],
+            "BIL_AdtnlInfo": [
+                "additional billing information",
+                "billing additional info"
+            ],
+            "BIL_Address": [
+                "billing street address",
+                "bill to address",
+                "invoice address",
+                "billing address"
+            ],
+            "BIL_City": [
+                "billing city",
+                "invoice city"
+            ],
+            "BIL_State": [
+                "billing state",
+                "invoice state"
+            ],
+            "BIL_Zip": [
+                "billing zip",
+                "billing zip code",
+                "billing postal code"
+            ]
+        }
+    }
+}
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def normalize(text: str) -> str:
+    """Normalize text for matching."""
+    text = str(text).lower()
+    text = re.sub(r"[_\-]+", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def contains_phrase(text: str, phrase: str) -> bool:
+    """Match complete words or phrases."""
+    phrase = normalize(phrase)
+
+    if not phrase:
+        return False
+
+    pattern = (
+        r"(?<!\w)" + re.escape(phrase) + r"(?!\w)"
+    )
+
+    return bool(re.search(pattern, text))
+
+
+def score_template(
+    query: str,
+    name: str,
+    schema: dict
+) -> int:
+    """Score a template using names and business synonyms."""
+    score = 0
+
+    if contains_phrase(query, name):
+        score += 10
+
+    for keyword in schema.get("keywords", []):
+        if contains_phrase(query, keyword):
+            score += 5
+
+    for column, aliases in schema.get(
+        "field_aliases", {}
+    ).items():
+        if contains_phrase(query, column):
+            score += 2
+
+        for alias in aliases:
+            if contains_phrase(query, alias):
+                score += 3
+
+    return score
+
+
+def find_requested_columns(
+    query: str,
+    schema: dict
+) -> list:
+    """
+    Identify requested fields across main and nested sections.
+    """
+    selected = []
+
+    # Main columns
+    all_columns = list(schema.get("columns", []))
+
+    # FIX: Include nested section columns
+    for section in schema.get("sections", {}).values():
+        all_columns.extend(section.get("columns", []))
+
+    aliases = schema.get("field_aliases", {})
+
+    for column in dict.fromkeys(all_columns):
+        terms = [column] + aliases.get(column, [])
+
+        if any(
+            contains_phrase(query, term)
+            for term in terms
+        ):
+            selected.append(column)
+
+    return selected
+
+
+def is_full_details_request(query: str) -> bool:
+    """Identify requests for complete template information."""
+    query = normalize(query)
+
+    phrases = [
+        "all details",
+        "full details",
+        "complete details",
+        "all information",
+        "complete information",
+        "full information",
+        "entire template",
+        "show everything",
+        "complete record",
+        "full record",
+        "billing center for",
+        "billing center details",
+        "show billing center",
+        "billing center information",
+        "billing for"
+    ]
+
+    return any(
+        contains_phrase(query, phrase)
+        for phrase in phrases
+    )
+
+
+# ============================================================
+# SCHEMA RESOLUTION
+# ============================================================
+
+def resolve_schemas(
+    user_query: str,
+    previous_template: str = ""
+) -> dict[str, Any]:
+
+    query = normalize(user_query)
+
+    if not query:
+        return {
+            "status": "invalid_request",
+            "message": "User query cannot be empty"
+        }
+
+    matches = []
+
+    for name, schema in DEFAULT_SCHEMAS.items():
+        score = score_template(query, name, schema)
+
+        if score > 0:
+            matches.append((score, name, schema))
+
+    # Previous template fallback
+    if not matches and previous_template in DEFAULT_SCHEMAS:
+        matches.append((
+            1,
+            previous_template,
+            DEFAULT_SCHEMAS[previous_template]
+        ))
+
+    if not matches:
+        return {
+            "status": "not_found",
+            "message": (
+                "No matching template found. "
+                "Continue with normal Voicebox retrieval."
+            ),
+            "available_templates": list(
+                DEFAULT_SCHEMAS.keys()
+            )
+        }
+
+    matches.sort(
+        key=lambda item: item[0],
+        reverse=True
+    )
+
+    best_score = matches[0][0]
+
+    best_matches = [
+        item for item in matches
+        if item[0] == best_score
+    ]
+
+    results = []
+
+    for score, name, schema in best_matches:
+
+        # Main columns
+        main_columns = list(schema.get("columns", []))
+
+        # FIX: Include all nested section columns
+        all_columns = list(main_columns)
+
+        for section in schema.get(
+            "sections", {}
+        ).values():
+            all_columns.extend(
+                section.get("columns", [])
+            )
+
+        # Preserve original order and avoid duplicates
+        all_columns = list(dict.fromkeys(all_columns))
+
+        requested = find_requested_columns(
+            query, schema
+        )
+
+        # Full requests use all available schema columns.
+        # Specific requests use matching attributes.
+        retrieval_columns = (
+            all_columns
+            if is_full_details_request(query) or not requested
+            else requested
+        )
+
+        voicebox_question = (
+            f"{user_query}. "
+            f"Retrieve the following {name} attributes "
+            f"where available: "
+            f"{', '.join(retrieval_columns)}. "
+            "Return only actual matching account records. "
+            "Do not generate missing values."
+        )
+
+        results.append({
+            "template": name,
+            "description": schema.get(
+                "description", ""
+            ),
+            "columns": all_columns,
+            "main_columns": main_columns,
+            "sections": schema.get("sections", {}),
+            "requested_columns": requested,
+            "retrieval_columns": retrieval_columns,
+            "column_count": len(all_columns),
+            "field_aliases": schema.get(
+                "field_aliases", {}
+            ),
+            "voicebox_question": voicebox_question
+        })
+
+    return {
+        "status": (
+            "matched" if len(results) == 1
+            else "ambiguous"
+        ),
+        "templates": results,
+        "message": (
+            "Use the resolved schema columns and order. "
+            "For complete requests, include nested sections. "
+            "Retrieve actual values exclusively from Voicebox."
+        )
+    }
+
+
+# ============================================================
+# WATSONX ORCHESTRATE TOOL
+# ============================================================
+
+@tool(permission=ToolPermission.READ_ONLY)
+def schema_resolver(
+    user_query: str,
+    previous_template: str = ""
+) -> str:
+    """
+    Identify the predefined Excel template schema matching
+    the user's UPS account-related request.
+
+    Supports Pickup, Center Contact Info, FEEDER,
+    PEA Users, and Billing Center.
+
+    Includes nested section columns and recognizes
+    short requests such as 'billing'.
+
+    Args:
+        user_query: Current user question or clarified intent.
+        previous_template: Previously resolved template for
+            contextual follow-up questions. Leave empty
+            if no previous template exists.
+
+    Returns:
+        JSON string containing matching templates, all
+        ordered columns, sections, requested attributes,
+        and a suggested Voicebox retrieval question.
+    """
+    try:
+        result = resolve_schemas(
+            user_query=user_query,
+            previous_template=previous_template
+        )
+
+    except Exception:
+        result = {
+            "status": "error",
+            "message": (
+                "Schema resolution failed. "
+                "Continue with normal Voicebox retrieval."
+            )
+        }
+
+    return json.dumps(
+        result,
+        ensure_ascii=False
+    )
